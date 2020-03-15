@@ -1,0 +1,4 @@
+Hello World: Greetings from MyCoRe
+==================================
+
+The MyCoRe community greets its users!
