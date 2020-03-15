@@ -18,11 +18,13 @@
 
 package org.mycore.tools.restapi.client.v1;
 
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.io.StringWriter;
 import java.math.BigInteger;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.security.KeyPair;
@@ -61,13 +63,18 @@ public class MCREncryptionHelper {
 
     //http://blog.axxg.de/java-verschluesselung-beispiel-quickstart/
 
-    public static long getFileSize(Path f) {
+    public static long getSize(Path f) {
         try {
             return Files.size(f);
         } catch (IOException e) {
             return -1;
         }
     }
+    
+    public static long getSize(String content) {
+        return content.getBytes(StandardCharsets.UTF_8).length;
+    }
+
 
     public static boolean verifyMD5Checksum(Path file, String testChecksum) {
         String fileHash = createMD5Checksum(file);
@@ -89,6 +96,27 @@ public class MCREncryptionHelper {
         }
         byte[] data = new byte[1024];
         try (InputStream fis = Files.newInputStream(file)) {
+            int read = 0;
+            while ((read = fis.read(data)) != -1) {
+                md5.update(data, 0, read);
+            }
+        } catch (IOException e) {
+            LOGGER.error("Error creating MD5 checksum", e);
+        }
+
+        //output as hex
+        return String.format("%032x", new BigInteger(1, md5.digest()));
+    }
+    
+    public static String createMD5Checksum(String content) {
+        MessageDigest md5 = null;
+        try {
+            md5 = MessageDigest.getInstance("MD5");
+        } catch (NoSuchAlgorithmException nsae) {
+            //does not happen, do nothing
+        }
+        byte[] data = new byte[1024];
+        try (InputStream fis = new ByteArrayInputStream(content.getBytes(StandardCharsets.UTF_8))) {
             int read = 0;
             while ((read = fis.read(data)) != -1) {
                 md5.update(data, 0, read);

@@ -324,9 +324,22 @@ public class MyCoReRestAPIClient {
         URI uri = URI.create(credentials.getRestAPIBaseURL() + "/objects");
         TreeMap<String, String> data = new TreeMap<String, String>();
         data.put("md5", MCREncryptionHelper.createMD5Checksum(xmlFile));
-        data.put("size", Long.toString(MCREncryptionHelper.getFileSize(xmlFile)));
+        data.put("size", Long.toString(MCREncryptionHelper.getSize(xmlFile)));
 
         return executePostRequest(uri, data, xmlFile);
+    }
+    
+    public String uploadMCRObject(String xmlContent) throws IOException, InterruptedException {
+        URI uri = URI.create(credentials.getRestAPIBaseURL() + "/objects");
+        TreeMap<String, String> data = new TreeMap<String, String>();
+        data.put("md5", MCREncryptionHelper.createMD5Checksum(xmlContent));
+        data.put("size", Long.toString(MCREncryptionHelper.getSize(xmlContent)));
+
+        byte[] contents = xmlContent.getBytes(StandardCharsets.UTF_8);
+        String fileName = "contents.xml";
+        String mimeType = "application/xml";
+        
+        return executePostRequest(uri, data, contents, fileName, mimeType);
     }
 
     //String location =  "http://localhost:8080/rosdok/api/v1/objects/rosdok_document_0000000249";
@@ -378,17 +391,30 @@ public class MyCoReRestAPIClient {
     /**
      * executes a HTTP Post request and returns the value of the Header "Location"
      * 
-     * @param httpPost
+     * @param path - can be null
      * @return
      * @throws ClientProtocolException
      * @throws IOException
      * @throws InterruptedException 
      */
-
     public String executePostRequest(URI uri, SortedMap<String, String> data, Path path)
             throws IOException, InterruptedException {
+        if(path!=null) {
+        String mimeType = Files.probeContentType(path);
+        byte[] contents = Files.readAllBytes(path);
+        String fileName = path.getFileName().toString();
+        
+        return executePostRequest(uri, data, contents, fileName, mimeType);
+        }
+        else {
+            return executePostRequest(uri, data, null, null, null);
+        }
+    }
+    
+    public String executePostRequest(URI uri, SortedMap<String, String> data, byte[] contents, String fileName, String mimeType)
+            throws IOException, InterruptedException {
         String boundary = UUID.randomUUID().toString();
-        HttpRequest.Builder httpPost = HttpRequest.newBuilder().POST(ofMimeMultipartData(data, path, boundary))
+        HttpRequest.Builder httpPost = HttpRequest.newBuilder().POST(ofMimeMultipartData(data, contents, fileName, mimeType, boundary))
                 .uri(uri);
         httpPost.header("Content-Type", "multipart/form-data;boundary=" + boundary);
         if (data.size() > 0) {
@@ -457,7 +483,7 @@ public class MyCoReRestAPIClient {
         result.put("path", path);
         result.put("maindoc", Boolean.toString(isMainDoc));
         result.put("md5", MCREncryptionHelper.createMD5Checksum(f));
-        result.put("size", Long.toString(MCREncryptionHelper.getFileSize(f)));
+        result.put("size", Long.toString(MCREncryptionHelper.getSize(f)));
         result.put("mcrObjectID", mcrID);
         result.put("mcrDerivateID", derID);
         result.put("unzip", Boolean.toString(unzip));
@@ -583,15 +609,7 @@ public class MyCoReRestAPIClient {
         return new String(byteArray, StandardCharsets.UTF_8);
     }
 
-    /**
-     * 
-     * @param data
-     * @param boundary
-     * @return a BodyPublisher
-     * @throws IOException
-     * @see https://golb.hplar.ch/2019/01/java-11-http-client.html#upload-with-multipart
-     */
-    public static BodyPublisher ofMimeMultipartData(Map<String, String> data, Path path, String boundary)
+    public static BodyPublisher ofMimeMultipartData(Map<String, String> data, byte[] contents, String fileName, String mimeType, String boundary)
             throws IOException {
         var byteArrays = new ArrayList<byte[]>();
         byte[] separator = ("--" + boundary + "\r\nContent-Disposition: form-data; name=")
@@ -602,17 +620,16 @@ public class MyCoReRestAPIClient {
                     .getBytes(StandardCharsets.UTF_8));
 
         }
-        if (path != null) {
-            String mimeType = Files.probeContentType(path);
+        if (contents != null) {
             byteArrays.add(separator);
-            byteArrays.add(("\"" + "file" + "\"; filename=\"" + path.getFileName() + "\"\r\nContent-Type: " + mimeType
+            byteArrays.add(("\"" + "file" + "\"; filename=\"" + fileName + "\"\r\nContent-Type: " + mimeType
                     + "\r\n\r\n").getBytes(StandardCharsets.UTF_8));
-            byteArrays.add(Files.readAllBytes(path));
+            byteArrays.add(contents);
             byteArrays.add("\r\n".getBytes(StandardCharsets.UTF_8));
-
         }
 
         byteArrays.add(("--" + boundary + "--").getBytes(StandardCharsets.UTF_8));
         return BodyPublishers.ofByteArrays(byteArrays);
     }
+    
 }
