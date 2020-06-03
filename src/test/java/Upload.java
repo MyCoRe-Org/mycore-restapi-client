@@ -14,8 +14,8 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
 import org.junit.jupiter.api.TestInstance.Lifecycle;
+import org.mycore.tools.restapi.client.util.MyCoReRestAPICredentials;
 import org.mycore.tools.restapi.client.v1.MyCoReRestAPIClient;
-import org.mycore.tools.restapi.client.v1.MyCoReRestAPICredentials;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

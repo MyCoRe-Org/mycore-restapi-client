@@ -15,7 +15,7 @@
  * You should have received a copy of the GNU General Public License
  * along with MyCoRe.  If not, see <http://www.gnu.org/licenses/>.
  */
-package org.mycore.tools.restapi.client.v1;
+package org.mycore.tools.restapi.client.util;
 
 /**
  * MyCoRe REST-API Credentials
